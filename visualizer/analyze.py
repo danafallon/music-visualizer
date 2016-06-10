@@ -13,6 +13,7 @@ def get_song_data(filepath):
     rmse = librosa.feature.rmse(y=y)
     logamp = librosa.logamplitude(S ** 2)
     amplitudes = np.array([y[i] for i in np.arange(0, len(y), 512)])
+    smoothed_amps = moving_average(np.abs(amplitudes), 10)
     y_harmonic, y_percussive = librosa.effects.hpss(y)
     chromagram = librosa.feature.chroma_stft(y=y_harmonic, sr=sr).T
     chroma_frame_length_ms = song_length_ms / float(chromagram.shape[0])
@@ -21,7 +22,13 @@ def get_song_data(filepath):
         'spectrogram': S,
         'rmse': rmse[0],
         'logamp': logamp,
-        'amplitudes': amplitudes,
+        'amplitudes': smoothed_amps,
         'chromagram': chromagram,
         'chroma_frame_length_ms': chroma_frame_length_ms
     }
+
+
+def moving_average(a, n):
+    ret = np.cumsum(a, dtype=float)
+    ret[n:] = ret[n:] - ret[:-n]
+    return ret[n - 1:] / n

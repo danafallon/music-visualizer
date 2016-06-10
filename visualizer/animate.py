@@ -1,4 +1,3 @@
-from itertools import cycle
 import sys
 
 import numpy as np
@@ -28,15 +27,15 @@ colors = (
     )
 
 
-def plot_chromagram(chroma_frame):
+def plot_chromagram(chroma_frame, amp):
     # chroma_frame is a 1d numpy array with length 12
     x_vals = [i * (1 / 6.0) - 1 for i in range(12)]
-    glLineWidth(10.0)
+    glLineWidth(15.0)
     glBegin(GL_LINES)
     for x, y, color in zip(x_vals, chroma_frame, colors):
         glColor(color)
         glVertex(x, 0, 0)
-        glVertex(x, y, 0)
+        glVertex(x, y * amp * 3, 0)
     glEnd()
 
 
@@ -62,7 +61,7 @@ def animate(song_filepath):
     pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
 
     gluPerspective(45, (display[0] / display[1]), 0.1, 50.0)
-    glTranslatef(0.1, 0.0, -3)
+    glTranslatef(0.1, -0.5, -3)
 
     pygame.mixer.init()
     pygame.mixer.music.load(song_filepath)
@@ -78,11 +77,10 @@ def animate(song_filepath):
         # glRotate(0.3, 0, 1, 0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-        plot_chromagram(chromagram[frame_i])
-        draw_amp_wave(amplitudes[frame_i])
+        plot_chromagram(chromagram[frame_i], amplitudes[frame_i])
 
         pygame.display.flip()
-        pygame.time.delay(int(chroma_frame_length_ms))
+        pygame.time.delay(int(round(chroma_frame_length_ms)))
 
 
 if __name__ == '__main__':
