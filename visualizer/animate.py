@@ -1,3 +1,4 @@
+import numpy as np
 from OpenGL.GL import *
 from OpenGL.GLU import *
 import pygame
@@ -13,35 +14,44 @@ base_vertices = (
     (-1, -1, -1),
     (1, -1, 1),
     (1, 1, 1),
+    (-1, 1, 1),
     (-1, -1, 1),
-    (-1, 1, 1)
     )
 
 edges = (
-    (0, 1),
-    (0, 3),
-    (0, 4),
-    (2, 1),
-    (2, 3),
-    (2, 7),
-    (6, 3),
-    (6, 4),
-    (6, 7),
-    (5, 1),
-    (5, 4),
-    (5, 7)
+    (0, 1, 2),
+    (2, 3, 0),
+    (4, 5, 6),
+    (6, 7, 4),
+    (5, 1, 0),
+    (5, 4, 0),
+    (2, 6, 5),
+    (0, 3, 7)
     )
 
+num_bezier_segments = 50
 
-def draw_cube(scale=1):
-    glBegin(GL_LINES)
+
+def calculate_bezier_point(t, p0, p1, p2):
+    u = 1 - t
+    return (np.array(p0) * (u * u) + np.array(p1) * 2 * u * t + (t * t) * np.array(p2)).tolist()
+
+
+def draw_shape(scale=1):
+    # scale vertices
     vertices = []
     for vertex in base_vertices:
         vertices.append(tuple(c * scale for c in vertex))
+
+    # draw edges
     for edge in edges:
-        for vertex_i in edge:
-            glVertex(vertices[vertex_i])
-    glEnd()
+        glBegin(GL_LINE_STRIP)
+        for i in range(num_bezier_segments):
+            t = i / float(num_bezier_segments)
+            p0, p1, p2 = vertices[edge[0]], vertices[edge[1]], vertices[edge[2]]
+            glVertex(calculate_bezier_point(t, p0, p1, p2))
+
+        glEnd()
 
 
 def animate():
@@ -67,7 +77,11 @@ def animate():
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
         scale = 1
-        next_beat_time = beat_times[next_beat_idx] * 100
+        try:
+            next_beat_time = beat_times[next_beat_idx] * 100
+        except IndexError:
+            # no beats left
+            pass
         if centisecond == next_beat_time - 1:
             scale = 1.05
         elif centisecond == next_beat_time:
@@ -78,7 +92,7 @@ def animate():
         # catch missed beats
         elif centisecond > next_beat_time + 1:
             next_beat_idx += 1
-        draw_cube(scale)
+        draw_shape(scale)
 
         pygame.display.flip()
         pygame.time.delay(10)
