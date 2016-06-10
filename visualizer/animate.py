@@ -8,33 +8,39 @@ from analyze import get_song_data, EX_FILEPATH
 
 
 base_vertices = (
-    (1, -1, -1),
-    (1, 1, -1),
-    (-1, 1, -1),
-    (-1, -1, -1),
-    (1, -1, 1),
-    (1, 1, 1),
-    (-1, 1, 1),
-    (-1, -1, 1),
+    (-1, 0, 0),
+    (-0.7, -0.2, 0.8),
+    (-0.9, -0.8, 0.4),
+    (-0.5, -0.9, -0.2),
+    (-0.1, -1, 0),
+    (0.3, -0.4, -0.5),
+    (0, 0, 0.2),
+    (-0.1, 0.4, 0.7),
+    (0.2, 0.8, 0.3),
+    (0.5, 0.7, -0.4),
+    (0.7, 0.5, -0.1),
+    (0.7, -0.3, 0),
+    (1, 0, 0)
     )
 
 edges = (
-    (0, 1, 2),
-    (2, 3, 0),
-    (4, 5, 6),
-    (6, 7, 4),
-    (5, 1, 0),
-    (5, 4, 0),
-    (2, 6, 5),
-    (0, 3, 7)
+    (0, 1, 2, 3),
+    (3, 4, 5, 6),
+    (6, 7, 8, 9),
+    (9, 10, 11, 12),
     )
 
 num_bezier_segments = 50
 
 
-def calculate_bezier_point(t, p0, p1, p2):
+def calculate_bezier_point(t, p0, p1, p2, p3):
+    # for cubic bezier curves
     u = 1 - t
-    return (np.array(p0) * (u * u) + np.array(p1) * 2 * u * t + (t * t) * np.array(p2)).tolist()
+    term1 = np.array(p0) * (u ** 3)
+    term2 = np.array(p1) * t * (u ** 2) * 3
+    term3 = np.array(p2) * u * (t ** 2) * 3
+    term4 = np.array(p3) * (t ** 3)
+    return (term1 + term2 + term3 + term4).tolist()
 
 
 def draw_shape(scale=1):
@@ -44,30 +50,40 @@ def draw_shape(scale=1):
         vertices.append(tuple(c * scale for c in vertex))
 
     # draw edges
+    glBegin(GL_LINE_STRIP)
     for edge in edges:
-        glBegin(GL_LINE_STRIP)
         for i in range(num_bezier_segments):
             t = i / float(num_bezier_segments)
-            p0, p1, p2 = vertices[edge[0]], vertices[edge[1]], vertices[edge[2]]
-            glVertex(calculate_bezier_point(t, p0, p1, p2))
+            p0, p1, p2, p3 = vertices[edge[0]], vertices[edge[1]], vertices[edge[2]], vertices[edge[3]]
+            glVertex(calculate_bezier_point(t, p0, p1, p2, p3))
+    glEnd()
 
-        glEnd()
+
+def plot_chromagram(chroma_frame):
+    # chroma_frame is a 1d numpy array with length 12
+    glBegin(GL_POINTS)
+    x_vals = [i * (1 / 6.0) - 1 for i in range(12)]
+    for x, y in zip(x_vals, chroma_frame):
+        glVertex(x, y, 0)
+    glEnd()
 
 
 def animate():
     song_data = get_song_data(EX_FILEPATH)
-    beat_times = song_data['beat_times']
-    song_length = song_data['song_length']  # in seconds
-    next_beat_idx = 0
+    chromagram = song_data['chromagram']
+    chroma_frame_length_ms = song_data['chroma_frame_length_ms']
 
     pygame.init()
     display = (800, 600)
     pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
 
     gluPerspective(45, (display[0] / display[1]), 0.1, 50.0)
-    glTranslatef(0.0, 0.0, -5)
+    glTranslatef(0.0, 0.0, -3)
 
-    for centisecond in range(song_length * 100):
+    pygame.mixer.init()
+    pygame.mixer.music.load(EX_FILEPATH)
+    pygame.mixer.music.play()
+    for frame_i in range(chromagram.shape[0]):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -76,26 +92,10 @@ def animate():
         glRotate(1, 3, 1, 1)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-        scale = 1
-        try:
-            next_beat_time = beat_times[next_beat_idx] * 100
-        except IndexError:
-            # no beats left
-            pass
-        if centisecond == next_beat_time - 1:
-            scale = 1.05
-        elif centisecond == next_beat_time:
-            scale = 1.1
-        elif centisecond == next_beat_time + 1:
-            scale = 1.05
-            next_beat_idx += 1
-        # catch missed beats
-        elif centisecond > next_beat_time + 1:
-            next_beat_idx += 1
-        draw_shape(scale)
+        plot_chromagram(chromagram[frame_i])
 
         pygame.display.flip()
-        pygame.time.delay(10)
+        pygame.time.delay(int(chroma_frame_length_ms))
 
 
 animate()
