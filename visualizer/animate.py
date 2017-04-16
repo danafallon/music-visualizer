@@ -78,6 +78,7 @@ def animate(song_filepath):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
         plot_chromagram(chromagram[frame_i], amplitudes[frame_i])
+        # draw_amp_wave(amplitudes[frame_i])
 
         pygame.display.flip()
         pygame.time.delay(int(round(chroma_frame_length_ms)))

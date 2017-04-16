@@ -12,11 +12,14 @@ def get_song_data(filepath):
     S = np.abs(librosa.stft(y)).T
     rmse = librosa.feature.rmse(y=y)
     logamp = librosa.logamplitude(S ** 2)
+
     amplitudes = np.array([y[i] for i in np.arange(0, len(y), 512)])
     smoothed_amps = moving_average(np.abs(amplitudes), 10)
+
     y_harmonic, y_percussive = librosa.effects.hpss(y)
     chromagram = librosa.feature.chroma_stft(y=y_harmonic, sr=sr).T
     chroma_frame_length_ms = song_length_ms / float(chromagram.shape[0])
+
     return {
         'song_length_ms': song_length_ms,
         'spectrogram': S,
